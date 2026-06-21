@@ -1,4 +1,4 @@
-# 🚗 Driver Drowsiness Detection System
+# 🚗 DriveGuard AI: Real-Time Driver Fatigue Monitoring System
 
 A real-time AI-based Driver Drowsiness Detection System using **Python, OpenCV, and MediaPipe**.  
 The system detects **eye closure, yawning, and fatigue**, and sends **voice alerts, alarms, and Telegram notifications with GPS location**.
