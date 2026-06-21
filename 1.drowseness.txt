@@ -1,0 +1,77 @@
+ 1. Road Accidents
+Due to:
+Drowsy driving
+Over-speeding
+No monitoring
+👉 Need: Smart alert systems
+##
+MediaPipe = Deep Learning
+Uses = CNN models
+Task = Face + landmark detection
+
+process:
+
+EAR calculation
+Drowsiness logic
+Alarm system
+UI text & stats
+Project structure
+
+ extra :
+ add for advance project :
+Streamlit UI (very important for resume)
+Mobile alert (SMS)
+Save logs (CSV dashboard)
+Deploy online
+
+botname :datamine
+username :datathouht_bot
+#bot token :8789720198:AAEvCU096ggfYqgd3ZhuAuyK8nDpNVVTzaQ
+get an id by:
+https://api.telegram.org/bot"YOUR_NEW_TOKEN"/getMe #  show info of bot 
+
+# updates in bot:
+#https://api.telegram.org/botYOUR_TOKEN/getUpdates
+
+
+
+
+
+python with sql :
+
+
+to see data:
+
+
+import pymysql
+
+conn = pymysql.connect(host='localhost', user='root', password='1234', database='your_db')
+cursor = conn.cursor()
+
+cursor.execute("SELECT * FROM your_table")
+for row in cursor.fetchall():
+    print(row)
+
+conn.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

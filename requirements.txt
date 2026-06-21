@@ -1,0 +1,338 @@
+opencv-python
+mediapipe #dlib
+imutils
+scipy
+playsound
+# advanced:
+1.Add Yawning Detection (MediaPipe)
+2.add timer based alert.
+3. Save Drowsiness Logs 📊
+4. Improve UI 🖥️
+Show EAR value on screen
+  Show EAR value on screen
+    Add status:
+    "Awake ✅"    "Sleepy ⚠️"
+5. Convert to Web App 🌐 (Very Powerful)
+Using:
+ Flask
+ Live camera feed in browser
+
+ ##🎯 FINAL FEATURES
+
+✔ Real-time drowsiness detection
+✔ Yawning detection
+✔ Timer-based accuracy
+✔ Voice + alarm alert
+✔ Log file tropencv-python
+mediapipe
+imutils
+scipy
+playsound
+numpy
+pyttsx3
+requests
+mysql-connector-pythonacking
+✔ Telegram alert to ALL users
+✔ 🌍 Live GPS location sharing
+opencv-python
+mediapipe
+imutils
+scipy
+playsound
+numpy
+pyttsx3
+requests
+mysql-connector-python
+🚀 ##YOUR PROJECT LEVEL
+
+👉 Now this is:
+
+🔥 Final Year Project (A+ level)
+🔥 Industry-ready system
+🔥 Real-time AI + IoT style alert system
+
+##Before MediaPipe, we needed this for:
+🧠 What is shape_predictor_68_landmarks.dat?
+✔ Eye Detection (EAR calculation)
+✔ Mouth Detection (MAR calculation)
+✔ Drowsiness detection
+✔ Face alignment
+Image → Face detected → 68 landmark points → calculations (EAR/MAR)
+
+# mysql connecting
+1.pip install mysql-connector-python
+2.pip show mysql-connector-python
+#pyttsx3:
+1.pip install pyttsx3
+2.python -m pip install pyttsx3 # if fails
+3.stall pypiwin32 # backend
+a.version checks:
+py -0
+py -3.10 app.py --chage version.
+requests:
+0.python -m pip install requests.
+1.python -c "import requests; print('requests OK')"
+2.pip install opencv-python mediapipe numpy pyttsx3 playsound requests mysql-connector-python
+
+
+##alaram.mp3:
+1.from playsound import playsound
+2.playsound("alarm.mp3")
+
+
+##first run venv:
+venv\Scripts\activate
+python app.py
+
+# ===================== IMPORTS =====================
+import cv2
+import time
+import mediapipe as mp
+import numpy as np
+import threading
+import pyttsx3
+import requests
+import mysql.connector
+from playsound import playsound
+
+# ===================== VOICE ENGINE =====================
+engine = pyttsx3.init()
+
+# ===================== MEDIA PIPE =====================
+mp_face_mesh = mp.solutions.face_mesh
+face_mesh = mp_face_mesh.FaceMesh()
+
+# ===================== LANDMARKS =====================
+LEFT_EYE = [33, 160, 158, 133, 153, 144]
+RIGHT_EYE = [362, 385, 387, 263, 373, 380]
+MOUTH = [13, 14, 78, 308]
+
+# ===================== MYSQL CONNECTION =====================
+
+from xml.dom.minidom import Notation
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="obul@2004",
+    database="drowsiness_db"
+)
+
+cursor = db.cursor()
+
+# ===================== TELEGRAM TOKEN =====================
+TOKEN = "8789720198:AAEvCU096ggfYqgd3ZhuAuyK8nDpNVVTzaQ"
+
+# ===================== VARIABLES =====================
+drowsy_count = 0
+eye_start_time = None
+yawn_start_time = None
+
+voice_on = False
+yawn_voice_on = False
+
+# ===================== FUNCTIONS =====================
+
+def eye_aspect_ratio(eye):
+    A = np.linalg.norm(eye[1] - eye[5])
+    B = np.linalg.norm(eye[2] - eye[4])
+    C = np.linalg.norm(eye[0] - eye[3])
+    return (A + B) / (2.0 * C)
+
+def mouth_aspect_ratio(mouth):
+    vertical = np.linalg.norm(mouth[0] - mouth[1])
+    horizontal = np.linalg.norm(mouth[2] - mouth[3])
+    return vertical / horizontal
+
+def speak(text):
+    engine.say(text)
+    engine.runAndWait()
+
+def alarm():
+    playsound("alarm.mp3")
+
+def save_log(msg):
+    with open("log.txt", "a") as f:
+        t = time.strftime("%Y-%m-%d %H:%M:%S")
+        f.write(f"{t} - {msg}\n")
+
+# ===================== GPS LOCATION =====================
+
+def get_location():
+    try:
+        res = requests.get("https://ipinfo.io/json")
+        data = res.json()
+
+        loc = data.get("loc", "")
+        city = data.get("city", "")
+        region = data.get("region", "")
+        country = data.get("country", "")
+
+        return f"{city}, {region}, {country}\nhttps://maps.google.com/?q={loc}"
+    except:
+        return "Location not available"
+
+# ===================== MYSQL USERS =====================
+
+def get_users():
+    url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
+    data = requests.get(url).json()
+
+    for item in data["result"]:
+        chat = item["message"]["chat"]
+
+        chat_id = chat["id"]
+        first_name = chat.get("first_name", "")
+        last_name = chat.get("last_name", "")
+        username = chat.get("username", "")
+
+        sql = """
+        INSERT IGNORE INTO users (chat_id, first_name, last_name, username)
+        VALUES (%s, %s, %s, %s)
+        """
+        cursor.execute(sql, (chat_id, first_name, last_name, username))
+        db.commit()
+
+# ===================== TELEGRAM ALERT =====================
+
+def send_alert_all():
+    location = get_location()
+
+    cursor.execute("SELECT chat_id, first_name FROM users")
+    users = cursor.fetchall()
+
+    for chat_id, name in users:
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+
+        message = f"""⚠️ DRIVER DROWSINESS ALERT
+
+👤 Name: {name}
+🚨 Status: Drowsy detected
+📍 Location:
+{location}
+"""
+
+        requests.post(url, data={
+            "chat_id": chat_id,
+            "text": message
+        })
+
+# ===================== CAMERA =====================
+cap = cv2.VideoCapture(0)
+
+EAR_THRESHOLD = 0.25
+MAR_THRESHOLD = 0.4
+
+EYE_TIME = 2
+YAWN_TIME = 2
+
+# ===================== MAIN LOOP =====================
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    get_users()
+
+    h, w = frame.shape[:2]
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    results = face_mesh.process(rgb)
+
+    if results.multi_face_landmarks:
+
+        for face_landmarks in results.multi_face_landmarks:
+
+            # ========== EYES ==========
+            left_eye = []
+            right_eye = []
+
+            for i in LEFT_EYE:
+                x = int(face_landmarks.landmark[i].x * w)
+                y = int(face_landmarks.landmark[i].y * h)
+                left_eye.append([x, y])
+
+            for i in RIGHT_EYE:
+                x = int(face_landmarks.landmark[i].x * w)
+                y = int(face_landmarks.landmark[i].y * h)
+                right_eye.append([x, y])
+
+            left_eye = np.array(left_eye)
+            right_eye = np.array(right_eye)
+
+            ear = (eye_aspect_ratio(left_eye) + eye_aspect_ratio(right_eye)) / 2.0
+
+            # ========== MOUTH ==========
+            mouth = []
+
+            for i in MOUTH:
+                x = int(face_landmarks.landmark[i].x * w)
+                y = int(face_landmarks.landmark[i].y * h)
+                mouth.append([x, y])
+
+            mouth = np.array(mouth)
+            mar = mouth_aspect_ratio(mouth)
+
+            # ===================== YAWN =====================
+            if mar > MAR_THRESHOLD:
+                if yawn_start_time is None:
+                    yawn_start_time = time.time()
+                    elapsed=time.time() - yawn_start_time
+                if elapsed > YAWN_TIME:
+                    cv2.putText(frame, "YAWNING!", (50, 150),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 3)
+
+                    if not yawn_voice_on:
+                        threading.Thread(target=speak,
+                                         args=("You are yawning",)).start()
+                        save_log("Yawning detected")
+                        yawn_voice_on = True
+            else:
+                yawn_start_time = None
+                yawn_voice_on = False
+            # after EAR and MAR calculation
+
+
+            # ===================== DROWSY =====================
+            if ear < EAR_THRESHOLD:
+                if eye_start_time is None:
+                    eye_start_time = time.time()
+                    elapsed=time.time() - eye_start_time
+                if elapsed >=EYE_TIME:
+                    cv2.putText(frame, "DROWSY!", (50, 100),
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+
+                    if not voice_on:
+                        drowsy_count += 1
+
+                        threading.Thread(target=alarm).start()
+                        threading.Thread(target=speak,
+                                         args=("Wake up",)).start()
+
+                        save_log(f"Drowsy count {drowsy_count}")
+
+                        if drowsy_count >= 5:
+                            send_alert_all()
+
+                        voice_on = True
+            else:
+                eye_start_time = None
+                voice_on = False
+
+##DISPLAY WINDOW##
+    cv2.imshow("Drowsiness Detection", frame)
+
+    if cv2.waitKey(1) & 0xFF == 27:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+#RESULT
+#RESULT
+#👁️ Drowsy detected → alert
+#😮 Yawning → voice alert
+#TIMER LOGIC 2sec
+#VOICE +ALARAM ALERT
+#📊 Log saved
+#📱 100 users → each gets message with their name
+#?📱 Send GPS location:IP GEOLOCATION (WIFI / IP)
